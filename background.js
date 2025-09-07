@@ -3,7 +3,7 @@ let searchTerms = [
 ];
 
 const TOTAL_SEARCHES = 5; // Easy to change to 20 later
-const SEARCH_INTERVAL = 9000; // 9 seconds in milliseconds
+const SEARCH_INTERVAL = 6000; // 6 seconds in milliseconds
 
 let currentSearchCount = 0;
 let searchTabId = null;
@@ -202,7 +202,7 @@ async function automateRewards(tabId) {
               console.log(`Clicking reward activity ${i + 1}/${rewardLinks.length}`);
               rewardLinks[i].click();
               i++;
-              setTimeout(clickNextReward, 4000); // 4 seconds delay
+              setTimeout(clickNextReward, 2000); // 2 seconds delay
             } else {
               console.log("All reward activities completed");
               resolve(rewardLinks.length);
@@ -216,8 +216,47 @@ async function automateRewards(tabId) {
     
     console.log("Bing rewards automation completed successfully");
     
+    // Get final reward points after automation
+    await getRewardPoints(tabId);
+    
   } catch (error) {
     console.error("Error during rewards automation:", error);
+  }
+}
+
+// Function to get current Microsoft Rewards points
+async function getRewardPoints(tabId) {
+  try {
+    console.log("Getting current reward points...");
+    
+    // Small delay to ensure rewards counter is updated
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Execute the points checking script
+    const result = await chrome.scripting.executeScript({
+      target: {tabId: tabId},
+      func: () => {
+        // Simple function to get Microsoft Rewards points
+        function getCurrentRewardPoints() {
+          const span = document.querySelector('mee-rewards-counter-animation span');
+          return span ? parseInt(span.textContent.replace(/\D/g, '')) : null;
+        }
+        
+        const points = getCurrentRewardPoints();
+        console.log('Current Reward Points:', points);
+        return points;
+      }
+    });
+    
+    const points = result[0].result;
+    if (points !== null) {
+      console.log(`🎉 Final Microsoft Rewards Points: ${points}`);
+    } else {
+      console.log("⚠️ Could not retrieve reward points - counter element not found");
+    }
+    
+  } catch (error) {
+    console.error("Error getting reward points:", error);
   }
 }
 
@@ -225,14 +264,14 @@ async function automateRewards(tabId) {
 chrome.runtime.onStartup.addListener(() => {
   console.log("Browser started, initiating automatic searches...");
   // Small delay to ensure everything is loaded
-  setTimeout(startAutomaticSearches, 3000);
+  setTimeout(startAutomaticSearches, 2000);
 });
 
 // Start searches when extension is installed or enabled
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed/enabled, initiating automatic searches...");
   // Small delay to ensure everything is loaded
-  setTimeout(startAutomaticSearches, 3000);
+  setTimeout(startAutomaticSearches, 2000);
 });
 
 // Also start searches when service worker becomes active (for Edge compatibility)
