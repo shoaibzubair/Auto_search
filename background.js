@@ -263,54 +263,14 @@ async function getRewardPoints(tabId) {
 // Function to log rewards data to CSV file
 async function logRewardsData(rewardPoints) {
   try {
-    console.log("Logging rewards data to file...");
+    console.log("🔄 Logging rewards data...");
     
     // Get current date and time
     const now = new Date();
     const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const time = now.toTimeString().split(' ')[0]; // HH:MM:SS
     
-    // Create CSV content
-    const csvHeader = 'Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n';
-    const csvRow = `${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}\n`;
-    const csvContent = csvHeader + csvRow;
-    
-    // Create blob and download using a different approach
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    
-    // Use chrome.tabs to inject a download script
-    await chrome.scripting.executeScript({
-      target: {tabId: searchTabId},
-      func: (csvData, filename, profileInfo) => {
-        console.log('Creating download for:', profileInfo);
-        
-        // Create download link
-        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.style.display = 'none';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up
-        URL.revokeObjectURL(url);
-        
-        console.log('✅ File download initiated:', filename);
-        return true;
-      },
-      args: [csvContent, `rewards_log_${profileId}_${date}.csv`, `${profileId} - ${rewardPoints} points`]
-    });
-    
-    console.log(`✅ Rewards data logged: ${profileId} - ${rewardPoints} points`);
-    
-    // Also store in chrome.storage as backup
-    const storageKey = `reward_log_${Date.now()}`;
+    // Create the data entry
     const logEntry = {
       date,
       time,
@@ -321,14 +281,67 @@ async function logRewardsData(rewardPoints) {
       timestamp: now.toISOString()
     };
     
+    // Store in chrome.storage.local with unique key
+    const storageKey = `reward_log_${Date.now()}_${profileId}`;
     await chrome.storage.local.set({ [storageKey]: logEntry });
-    console.log('📦 Data also saved to storage as backup');
+    
+    // Also maintain a list of all log entries for easy retrieval
+    const existingLogs = await chrome.storage.local.get(['allRewardLogs']);
+    const allLogs = existingLogs.allRewardLogs || [];
+    allLogs.push(logEntry);
+    await chrome.storage.local.set({ allRewardLogs: allLogs });
+    
+    console.log(`✅ Data saved to storage: ${profileId} - ${rewardPoints} points`);
+    
+    // Create a simple text-based download that works on Ubuntu
+    const csvContent = `Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}`;
+    
+    // Try to create download via page injection (Ubuntu-friendly)
+    try {
+      await chrome.scripting.executeScript({
+        target: {tabId: searchTabId},
+        func: (csvData, filename) => {
+          try {
+            // Create a text file download
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvData));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            
+            console.log('📁 CSV file download triggered:', filename);
+            return true;
+          } catch (err) {
+            console.error('Download failed:', err);
+            return false;
+          }
+        },
+        args: [csvContent, `rewards_log_${date}_${profileId.slice(-6)}.csv`]
+      });
+    } catch (downloadError) {
+      console.log('⚠️ Direct download failed, data saved to storage only');
+    }
+    
+    // Always log the CSV line for manual copying
+    console.log('📋 CSV Data (copy if needed):');
+    console.log(`${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}`);
+    
+    // Show summary
+    console.log(`📊 Session Summary:`);
+    console.log(`   Profile: ${profileId}`);
+    console.log(`   Points: ${rewardPoints}`);
+    console.log(`   Searches: ${TOTAL_SEARCHES}`);
+    console.log(`   Activities: ${completedActivities}`);
+    console.log(`   Completed: ${now.toLocaleString()}`);
     
   } catch (error) {
     console.error("❌ Error logging rewards data:", error);
     
-    // Fallback: just log to console in a copy-friendly format
-    console.log("📋 COPY THIS DATA:");
+    // Fallback: just log everything to console
+    console.log('🆘 FALLBACK - Copy this data manually:');
     console.log(`${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}`);
   }
 }
