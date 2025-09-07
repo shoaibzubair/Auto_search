@@ -159,10 +159,65 @@ async function startAutomaticSearches() {
     
     console.log(`All ${TOTAL_SEARCHES} searches completed at: ${new Date().toLocaleString()}`);
     
+    // After all searches are complete, visit rewards page and execute reward automation
+    await automateRewards(searchTabId);
+    
   } catch (error) {
     console.error("Error during automatic searches:", error);
   } finally {
     isSearching = false;
+  }
+}
+
+// Function to automate Bing rewards after searches complete
+async function automateRewards(tabId) {
+  try {
+    console.log("Starting Bing rewards automation...");
+    
+    // Navigate to rewards page
+    await chrome.tabs.update(tabId, { url: 'https://rewards.bing.com/' });
+    
+    // Wait for rewards page to load
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Execute the rewards clicking script
+    await chrome.scripting.executeScript({
+      target: {tabId: tabId},
+      func: () => {
+        return new Promise((resolve) => {
+          console.log("Starting rewards automation script...");
+          
+          const rewardLinks = document.querySelectorAll('#more-activities a.ds-card-sec');
+          console.log(`Found ${rewardLinks.length} reward activities`);
+          
+          if (rewardLinks.length === 0) {
+            console.log("No reward activities found");
+            resolve(0);
+            return;
+          }
+          
+          let i = 0;
+          function clickNextReward() {
+            if (i < rewardLinks.length) {
+              console.log(`Clicking reward activity ${i + 1}/${rewardLinks.length}`);
+              rewardLinks[i].click();
+              i++;
+              setTimeout(clickNextReward, 2000); // 2 seconds delay
+            } else {
+              console.log("All reward activities completed");
+              resolve(rewardLinks.length);
+            }
+          }
+          
+          clickNextReward();
+        });
+      }
+    });
+    
+    console.log("Bing rewards automation completed successfully");
+    
+  } catch (error) {
+    console.error("Error during rewards automation:", error);
   }
 }
 

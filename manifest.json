@@ -4,7 +4,7 @@
     "version": "2.0",
     "description": "Automatically performs Bing searches when browser starts",
     "permissions": ["scripting", "tabs", "storage"],
-    "host_permissions": ["*://*.bing.com/*"],
+    "host_permissions": ["*://*.bing.com/*", "*://rewards.bing.com/*"],
     "background": {
       "service_worker": "background.js"
     },
