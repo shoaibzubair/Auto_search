@@ -270,44 +270,66 @@ async function logRewardsData(rewardPoints) {
     const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const time = now.toTimeString().split(' ')[0]; // HH:MM:SS
     
-    // Check if this is the first entry (to add header)
-    let csvContent = '';
-    let isFirstEntry = false;
+    // Create CSV content
+    const csvHeader = 'Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n';
+    const csvRow = `${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}\n`;
+    const csvContent = csvHeader + csvRow;
     
-    // Try to check if file exists by attempting to read existing data
-    try {
-      const existingData = await chrome.storage.local.get(['csvLogExists']);
-      if (!existingData.csvLogExists) {
-        // First time logging, add header
-        csvContent = 'Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n';
-        await chrome.storage.local.set({ csvLogExists: true });
-        isFirstEntry = true;
-      }
-    } catch (error) {
-      // Assume first entry if we can't check
-      csvContent = 'Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n';
-      isFirstEntry = true;
-    }
-    
-    // Add the new entry
-    csvContent += `${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}\n`;
-    
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    // Create blob and download using a different approach
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
-    // Download the file using chrome.downloads API
-    await chrome.downloads.download({
-      url: url,
-      filename: 'rewards_log.csv',
-      conflictAction: 'uniquify', // This will append data without overwriting
-      saveAs: false // Auto-download to default location
+    // Use chrome.tabs to inject a download script
+    await chrome.scripting.executeScript({
+      target: {tabId: searchTabId},
+      func: (csvData, filename, profileInfo) => {
+        console.log('Creating download for:', profileInfo);
+        
+        // Create download link
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        URL.revokeObjectURL(url);
+        
+        console.log('✅ File download initiated:', filename);
+        return true;
+      },
+      args: [csvContent, `rewards_log_${profileId}_${date}.csv`, `${profileId} - ${rewardPoints} points`]
     });
     
     console.log(`✅ Rewards data logged: ${profileId} - ${rewardPoints} points`);
     
+    // Also store in chrome.storage as backup
+    const storageKey = `reward_log_${Date.now()}`;
+    const logEntry = {
+      date,
+      time,
+      profileId,
+      rewardPoints,
+      searchesCompleted: TOTAL_SEARCHES,
+      activitiesCompleted: completedActivities,
+      timestamp: now.toISOString()
+    };
+    
+    await chrome.storage.local.set({ [storageKey]: logEntry });
+    console.log('📦 Data also saved to storage as backup');
+    
   } catch (error) {
-    console.error("Error logging rewards data:", error);
+    console.error("❌ Error logging rewards data:", error);
+    
+    // Fallback: just log to console in a copy-friendly format
+    console.log("📋 COPY THIS DATA:");
+    console.log(`${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}`);
   }
 }
 
