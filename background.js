@@ -260,6 +260,57 @@ async function getRewardPoints(tabId) {
   }
 }
 
+// Function to log rewards data to CSV file
+async function logRewardsData(rewardPoints) {
+  try {
+    console.log("Logging rewards data to file...");
+    
+    // Get current date and time
+    const now = new Date();
+    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const time = now.toTimeString().split(' ')[0]; // HH:MM:SS
+    
+    // Check if this is the first entry (to add header)
+    let csvContent = '';
+    let isFirstEntry = false;
+    
+    // Try to check if file exists by attempting to read existing data
+    try {
+      const existingData = await chrome.storage.local.get(['csvLogExists']);
+      if (!existingData.csvLogExists) {
+        // First time logging, add header
+        csvContent = 'Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n';
+        await chrome.storage.local.set({ csvLogExists: true });
+        isFirstEntry = true;
+      }
+    } catch (error) {
+      // Assume first entry if we can't check
+      csvContent = 'Date,Time,ProfileID,RewardPoints,SearchesCompleted,ActivitiesCompleted\n';
+      isFirstEntry = true;
+    }
+    
+    // Add the new entry
+    csvContent += `${date},${time},${profileId},${rewardPoints},${TOTAL_SEARCHES},${completedActivities}\n`;
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    
+    // Download the file using chrome.downloads API
+    await chrome.downloads.download({
+      url: url,
+      filename: 'rewards_log.csv',
+      conflictAction: 'uniquify', // This will append data without overwriting
+      saveAs: false // Auto-download to default location
+    });
+    
+    console.log(`✅ Rewards data logged: ${profileId} - ${rewardPoints} points`);
+    
+  } catch (error) {
+    console.error("Error logging rewards data:", error);
+  }
+}
+
 // Start searches automatically when extension loads or browser starts
 chrome.runtime.onStartup.addListener(() => {
   console.log("Browser started, initiating automatic searches...");

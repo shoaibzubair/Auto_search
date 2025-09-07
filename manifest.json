@@ -3,7 +3,7 @@
     "name": "Auto Bing Search Extension",
     "version": "2.0",
     "description": "Automatically performs Bing searches when browser starts",
-    "permissions": ["scripting", "tabs", "storage"],
+    "permissions": ["scripting", "tabs", "storage", "downloads"],
     "host_permissions": ["*://*.bing.com/*", "*://rewards.bing.com/*"],
     "background": {
       "service_worker": "background.js"
