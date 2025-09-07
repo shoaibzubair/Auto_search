@@ -3,7 +3,7 @@ let searchTerms = [
 ];
 
 const TOTAL_SEARCHES = 5; // Easy to change to 20 later
-const SEARCH_INTERVAL = 6000; // 6 seconds in milliseconds
+const SEARCH_INTERVAL = 9000; // 9 seconds in milliseconds
 
 let currentSearchCount = 0;
 let searchTabId = null;
@@ -202,7 +202,7 @@ async function automateRewards(tabId) {
               console.log(`Clicking reward activity ${i + 1}/${rewardLinks.length}`);
               rewardLinks[i].click();
               i++;
-              setTimeout(clickNextReward, 2000); // 2 seconds delay
+              setTimeout(clickNextReward, 4000); // 4 seconds delay
             } else {
               console.log("All reward activities completed");
               resolve(rewardLinks.length);
@@ -225,14 +225,14 @@ async function automateRewards(tabId) {
 chrome.runtime.onStartup.addListener(() => {
   console.log("Browser started, initiating automatic searches...");
   // Small delay to ensure everything is loaded
-  setTimeout(startAutomaticSearches, 2000);
+  setTimeout(startAutomaticSearches, 3000);
 });
 
 // Start searches when extension is installed or enabled
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed/enabled, initiating automatic searches...");
   // Small delay to ensure everything is loaded
-  setTimeout(startAutomaticSearches, 2000);
+  setTimeout(startAutomaticSearches, 3000);
 });
 
 // Also start searches when service worker becomes active (for Edge compatibility)
