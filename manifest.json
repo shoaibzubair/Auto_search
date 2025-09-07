@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Auto Bing Search Extension",
+    "version": "2.0",
+    "description": "Automatically performs Bing searches when browser starts",
+    "permissions": ["scripting", "tabs", "storage"],
+    "host_permissions": ["*://*.bing.com/*"],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "icons": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+}
